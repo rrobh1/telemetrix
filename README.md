@@ -86,12 +86,37 @@ Exec=/home/SEU_USUARIO/Projetos/infra/start-infra.sh
 Icon=docker
 Terminal=true
 Categories=Development;
-Actions=Stop;
+Actions=Stop;OpenGrafana;OpenTraefik;OpenPortainer;OpenMinio;OpenZipkin;
 
 [Desktop Action Stop]
 Name=Parar Stack
-Exec=/home/SEU_USUARIO/Projetos/infra/stop-infra.sh
+Exec=/home/robson/WWW/Infra/stop-infra.sh
 Terminal=true
+
+[Desktop Action OpenGrafana]
+Name=Abrir Grafana
+Exec=firefox http://grafana.local
+Terminal=false
+
+[Desktop Action OpenTraefik]
+Name=Abrir Traefik
+Exec=firefox http://traefik.local
+Terminal=false
+
+[Desktop Action OpenPortainer]
+Name=Abrir Portainer
+Exec=firefox http://portainer.local
+Terminal=false
+
+[Desktop Action OpenMinio]
+Name=Abrir Minio
+Exec=firefox http://minio.local
+Terminal=false
+
+[Desktop Action OpenZipkin]
+Name=Abrir Zipkin
+Exec=firefox http://zipkin.local
+Terminal=false
 ```
 
 2. Torne executável:
