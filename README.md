@@ -48,7 +48,7 @@ Projetos/infra/
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/seu-rrobh1/telemetrix.git ~/Projetos/infra
+git clone https://github.com/rrobh1/telemetrix.git ~/Projetos/infra
 cd ~/Projetos/infra
 ```
 
