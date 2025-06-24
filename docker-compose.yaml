@@ -1,0 +1,227 @@
+services:
+  traefik:
+    container_name: traefik
+    image: traefik:latest
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --accesslog=false  # Desativar logs de acesso para melhorar desempenho
+      - --accesslog.bufferingsize=100  # Se precisar de logs, use buffer
+      - --ping=true  # Ativar healthcheck
+      - --metrics.prometheus=true  # Monitorar o próprio Traefik
+    ports:
+      - "80:80"
+      - "8080:8080" # Dashboard Traefik (opcional para dev)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.local`)"
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+    networks:
+      - monitoring
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    depends_on:
+      - loki
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${DEV_PASS}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel,grafana-clock-panel
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_DOMAIN=grafana.local
+      - GF_SMTP_ENABLED=false
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=5s
+    volumes:
+      - infra_grafana_data:/var/lib/grafana
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.local`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    networks:
+      - monitoring
+
+  loki:
+    container_name: loki
+    image: grafana/loki:latest
+    volumes:
+      - ./loki.yaml:/etc/loki/config.yaml:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.loki.rule=Host(`loki.local`)"
+      - "traefik.http.routers.loki.entrypoints=web"
+      - "traefik.http.services.loki.loadbalancer.server.port=3100"  # Porta padrão do Loki
+    networks:
+      - monitoring
+
+  promtail:
+    container_name: promtail
+    image: grafana/promtail:latest
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - /var/log:/var/log
+      - ./promtail-config.yml:/etc/promtail/config.yml:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.promtail.rule=Host(`promtail.local`)"
+      - "traefik.http.routers.promtail.entrypoints=web"
+      - "traefik.http.services.promtail.loadbalancer.server.port=9080"  # porta padrão do Promtail
+    networks:
+      - monitoring
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    volumes:
+      - infra_prometheus_data:/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.local`)"
+      - "traefik.http.routers.prometheus.entrypoints=web"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+    networks:
+      - monitoring
+      
+  node_exporter:
+    container_name: node_exporter
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nodeexporter.rule=Host(`node.local`)"
+      - "traefik.http.routers.nodeexporter.entrypoints=web"
+      - "traefik.http.services.nodeexporter.loadbalancer.server.port=9100"
+    networks:
+      - monitoring
+
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:latest
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - infra_portainer_data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.local`)"
+      - "traefik.http.routers.portainer.entrypoints=web"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    networks:
+      - monitoring
+
+  minio:
+    container_name: minio
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: ${DEV_USER}
+      MINIO_ROOT_PASSWORD: ${DEV_PASS}
+      MINIO_PROMETHEUS_AUTH_TYPE: "public"  # Adicione esta linha para permitir acesso às métricas
+    volumes:
+      - infra_minio_data:/data
+    command: server /data --console-address ":9001"
+    ports:
+      - "9001:9001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio.rule=Host(`minio.local`)"
+      - "traefik.http.routers.minio.entrypoints=web"
+      - "traefik.http.services.minio.loadbalancer.server.port=9001"
+    networks:
+      - monitoring
+
+  zipkin:
+    container_name: zipkin
+    image: openzipkin/zipkin:latest
+    ports:
+      - "9411:9411"  # Expor a porta padrão do Zipkin
+    volumes:
+      - infra_zipkin_data:/var/lib/zipkin  # Volume para persistência dos dados de tracing
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zipkin.rule=Host(`zipkin.local`)"
+      - "traefik.http.routers.zipkin.entrypoints=web"
+      - "traefik.http.services.zipkin.loadbalancer.server.port=9411"
+    networks:
+      - monitoring
+  
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=10s
+      - --max_housekeeping_interval=15s
+      - --allow_dynamic_housekeeping=true
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  postgres:
+    container_name: postgres
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${DEV_USER}
+      POSTGRES_PASSWORD: ${DEV_PASS}
+      POSTGRES_DB: postgres
+    volumes:
+      - infra_postgres_data:/var/lib/postgresql/data
+    networks:
+      - monitoring
+    labels:
+      - "traefik.enable=false"
+
+  postgres_exporter:
+    container_name: postgres_exporter
+    image: prometheuscommunity/postgres-exporter:latest
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DEV_USER}:${DEV_PASS}@postgres:5432/postgres?sslmode=disable"
+    networks:
+      - monitoring
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.postgres-exporter.rule=Host(`pgexporter.local`)"
+      - "traefik.http.routers.postgres-exporter.entrypoints=web"
+      - "traefik.http.services.postgres-exporter.loadbalancer.server.port=9187"
+
+  blackbox:
+    container_name: blackbox
+    image: prom/blackbox-exporter:latest
+    volumes:
+      - ./blackbox.yml:/etc/blackbox_exporter/config.yml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Isso mapeia host.docker.internal para o IP da máquina host
+    restart: unless-stopped
+    networks:
+      - monitoring
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.blackbox.rule=Host(`blackbox.local`)"
+      - "traefik.http.routers.blackbox.entrypoints=web"
+      - "traefik.http.services.blackbox.loadbalancer.server.port=9115"
+
+volumes:
+  infra_grafana_data:
+  infra_prometheus_data:
+  infra_portainer_data:
+  infra_minio_data:
+  infra_zipkin_data:
+  infra_postgres_data:
+
+networks:
+  monitoring:
+      external: true
+      name: infra_monitoring

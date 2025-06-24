@@ -1,0 +1,67 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8080']
+
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['node_exporter:9100']
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  - job_name: 'postgres_exporter'
+    static_configs:
+      - targets: ['postgres_exporter:9187']
+    relabel_configs:
+      - source_labels: ['__address__']
+        target_label: instance
+        replacement: 'postgres-db'
+
+  - job_name: 'minio'
+    metrics_path: /minio/v2/metrics/cluster
+    static_configs:
+      - targets: ['minio:9000']
+
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://localhost:8080    # Serviço local na porta 8080
+        - http://localhost:3000    # Serviço local na porta 3000
+        - http://127.0.0.1:9090    # Usando IP em vez de localhost  
+        - http://host.docker.internal:3000     # Se estiver no host
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115  # Endereço do Blackbox Exporter
+
+  - job_name: 'zipkin'
+    scrape_interval: 5s
+    metrics_path: /prometheus
+    static_configs:
+      - targets: ['zipkin:9411']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'zipkin_(collector|query)_.*'
+        action: keep
+
