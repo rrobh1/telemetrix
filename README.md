@@ -38,7 +38,7 @@ Projetos/infra/
 ├── promtail-config.yml   # Configuração do Promtail
 ├── prometheus.yml        # Configuração do Prometheus
 ├── blackbox.yml          # Configuração do Blackbox Exporter
-└── infra-stack.desktop   # Atalho de desktop com ação de Start e Stop
+└── telemetrix.desktop   # Atalho de desktop com ação de Start e Stop
 ```
 
 ---
@@ -48,7 +48,7 @@ Projetos/infra/
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/seu-usuario/infra-stack.git ~/Projetos/infra
+git clone https://github.com/seu-rrobh1/telemetrix.git ~/Projetos/infra
 cd ~/Projetos/infra
 ```
 
@@ -57,9 +57,6 @@ cd ~/Projetos/infra
 Edite o arquivo `.env`:
 
 ```env
-GRAFANA_ADMIN_PASS=admin123
-MINIO_USER=admin
-MINIO_PASS=admin123
 DEV_USER=admin
 DEV_PASS=admin123
 ```
@@ -77,13 +74,13 @@ chmod +x start-infra.sh stop-infra.sh
 
 ### Via atalho de desktop (Linux)
 
-1. Crie o arquivo `~/.local/share/applications/infra-stack.desktop`:
+1. Crie o arquivo `~/.local/share/applications/telemetrix.desktop`:
 
 ```ini
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Infra Stack
+Name=Telemetrix
 Comment=Inicia a stack de infraestrutura (Traefik, Grafana etc)
 Exec=/home/SEU_USUARIO/Projetos/infra/start-infra.sh
 Icon=docker
@@ -100,10 +97,10 @@ Terminal=true
 2. Torne executável:
 
 ```bash
-chmod +x ~/.local/share/applications/infra-stack.desktop
+chmod +x ~/.local/share/applications/telemetrix.desktop
 ```
 
-3. Pressione `Super` (tecla Windows), digite **Infra Stack** e fixe na barra com clique direito → **Adicionar aos Favoritos**.
+3. Pressione `Super` (tecla Windows), digite **Telemetrix** e fixe na barra com clique direito → **Adicionar aos Favoritos**.
 
 > ❗ Lembre-se de substituir `SEU_USUARIO` pelo seu nome real de usuário (verifique com `whoami`).
 
